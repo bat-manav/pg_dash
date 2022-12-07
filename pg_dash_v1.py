@@ -170,8 +170,8 @@ def pg_Info_layout():
         pg_info_tbl.add_column("VALUE", style="bright_magenta")
         pg_database="SELECT current_database();"
         pg_version="SELEct  version();"
-        pg_statup_time="SELEct  to_char(pg_postmaster_start_time(),'YYYY/MM/DD');"
-        pg_config_reload="SELEct  to_char(pg_conf_load_time(),'YYYY/MM/DD');"
+        pg_statup_time="SELEct  to_char(pg_postmaster_start_time(),'MON-DD-YYYY HH12: MIPM');"
+        pg_config_reload="SELEct  to_char(pg_conf_load_time(),'MON-DD-YYYY HH12: MIPM');"
         pg_timezone="SELEct  current_setting('TIMEZONE');"
         pg_port="select setting from pg_settings where name='port';"
         directory_detail_Query = "select name,setting from pg_settings where name in ('data_directory','config_file');"
@@ -280,7 +280,7 @@ def memoryparam_list():
         memoryparam_tbl.add_column("VALUE", style="magenta")
 #        memoryparam_tbl_query = " select name,  trunc(to_number(setting)/1024 ) || ' MB' Value  from pg_settings \
 #                where name in ('work_mem','shared_buffers','maintenance_work_mem','effective_cache_size');"
-        memoryparam_tbl_query=" select cast(setting as integer)/1024 || ' MB' Value  from pg_settings where name in ('work_mem','shared_buffers','maintenance_work_mem','effective_cache_size');"
+        memoryparam_tbl_query=" select name,cast(setting as integer)/1024 || ' MB' Value  from pg_settings where name in ('work_mem','shared_buffers','maintenance_work_mem','effective_cache_size');"
 
         cursor.execute(memoryparam_tbl_query)
         memoryparam_record = cursor.fetchall()
