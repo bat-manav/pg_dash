@@ -22,3 +22,6 @@ import psycopg2
 3. Run the python script as below .
 
 /usr/bin/python3 pg_dash_v1.py
+
+
+<a href="https://asciinema.org/a/0YrjtP1e8ao7gPE10tH3rELGt" target="_blank"><img src="https://asciinema.org/a/0YrjtP1e8ao7gPE10tH3rELGt.svg" /></a>
