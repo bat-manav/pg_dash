@@ -5,21 +5,21 @@ NOTE - > This script is tested against RHEL only.
 
 PRE-REQUISITES:
 
-1. Install python3 and below additional modules.
+<b>1. Install python3 and below additional modules.</b>
 
-example - > /usr/bin/python3 -m pip install rich
+example - > /usr/bin/python3 -m pip install rich datetime psutil pyfiglet os psycopg2
 
-import rich
-import datetime
-import psutil
-import pyfiglet
-import os
-import psycopg2
+rich
+datetime
+psutil
+pyfiglet
+os
+psycopg2
 
-2. Update the connect.py file with connection details.
+<b>2. Update the connect.py file with connection details.</b>
 
 
-3. Run the python script as below .
+<b>3. Run the python script as below .</b>
 
 /usr/bin/python3 pg_dash_v1.py
 
