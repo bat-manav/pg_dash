@@ -1,3 +1,7 @@
+### Author - K Rajkishore Patro
+### Tool_name - PG_DASH
+### Version - V1
+
 from logging import fatal
 import re
 import psycopg2
@@ -111,7 +115,26 @@ def maintenance_layout() -> Layout:
         layout2["body"].split(Layout(name="box3"), Layout(name="box4"))
         return layout2
 
-layout2 = monit_layout()
+layout2 = maintenance_layout()
+
+def object_layout() -> Layout:
+        """Define the layout."""
+        layout4 = Layout(name="root")
+
+        layout4.split(
+                Layout(name="header", size=3),
+                Layout(name="main", ratio=1),
+#               Layout(name="footer", size=1),
+        )
+        layout4["main"].split_row(
+                Layout(name="side", ratio=1, minimum_size=40),
+                Layout(name="body", ratio=1, minimum_size=40),
+        )
+        layout4["side"].split(Layout(name="box1"), Layout(name="box2"))
+        layout4["body"].split(Layout(name="box3"), Layout(name="box4"))
+        return layout4
+
+layout4 = object_layout()
 
 def process_data():
     time.sleep(0.02)
@@ -130,7 +153,7 @@ class Header:
 
 #connection = psycopg2.connect(user="enterprisedb",
 #                                                                  password="edb#123",
-#                                                                  host="54.91.137.21",
+#                                                                  host="54.91.***.***",
 #                                                                  port="5432",
 #                                                                  database="postgres")
 #cursor = connection.cursor()
@@ -506,6 +529,28 @@ def vacuum_ops_stats():
 #    eachInASeparateLine = "\n".join(butFirst)
 #    return eachInASeparateLine
 
+def object_count_stats():
+        object_count_tbl = Table(title="SCHEMA_WISE OBJECT COUNT ",title_style='Green',box=box.ASCII)
+        object_count_tbl.add_column("SCHEMA_NAME", style="cyan")
+        object_count_tbl.add_column("OBJECT_TYPE", style="cyan")
+        object_count_tbl.add_column("COUNT", style="cyan")
+        object_count_query = "SELECT n.nspname as schema_name ,CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence'  WHEN 's' THEN 'special' \
+	     END as object_type ,count(1)::text as object_count FROM pg_catalog.pg_class c  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+        WHERE c.relkind IN ('r','v','i','S','s') and n.nspname not like 'pg_%' and n.nspname not in ('information_schema') \
+        GROUP BY  n.nspname, CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence'  WHEN 's' THEN 'special' END ORDER BY n.nspname, \
+	    CASE c.relkind \
+	   WHEN 'r' THEN 'table' \
+	   WHEN 'v' THEN 'view' \
+	   WHEN 'i' THEN 'index' \
+	   WHEN 'S' THEN 'sequence' \
+	   WHEN 's' THEN 'special' END;"
+
+        cursor.execute(object_count_query) 
+        object_count_record = cursor.fetchall()
+        for row in object_count_record:
+                object_count_tbl.add_row(*list(row))
+        return object_count_tbl;
+
 os.system('clear')
 title = pyfiglet.figlet_format('PG-DASH V1', font="starwars" , justify="center",width=150)
 rprint(f'[yellow]{title}[/yellow]')
@@ -543,6 +588,8 @@ layout2["box2"].update(vacuum_ops_stats())
 layout2["box4"].update(index_stats())
 
 
+layout4["header"].update(Header())
+layout4["box1"].update(object_count_stats())
 
 
 
@@ -570,6 +617,18 @@ def menu_choice():
         "3.",
         "MAINTENANCE DASHBOARD",
         "PRESS 3",
+
+    ],
+    [
+        "4.",
+        "REPLICATION DASHBOARD",
+        "PRESS 4",
+
+    ],
+    [
+        "5.",
+        "OBJECT INSIGHT DASHBOARD",
+        "PRESS 4",
 
     ],
 
@@ -636,6 +695,8 @@ def menu_choice():
         monit_fun()
     elif int(choice)==3:
         maintenance_fun()
+    elif int(choice)==5:
+        object_fun()
     else:
         print('invalid choice')
 
@@ -654,7 +715,6 @@ def live_fun():
                     layout["sub_box32_L"].update(schema_list())
                     layout["sub_box32_R"].update(superuser_list())
                     layout["box2_U"].update(replication_list())
-#               layout["box2_D"].update(archive_info_box)
                     layout["box2_D"].update(archive_stats())
                     layout["sub_box4"].update(extension_list())
     menu_choice()
@@ -671,7 +731,6 @@ def monit_fun():
                     layout1["box2"].update(waitevent_stats())
                     layout1["box3"].update(long_query())
                     layout1["box4"].update(index_stats())
-#               layout["box2_D"].update(archive_info_box)
     menu_choice()
 
 def maintenance_fun():
@@ -685,13 +744,20 @@ def maintenance_fun():
 
 
 
-#               layout["box2_D"].update(archive_info_box)
+    menu_choice()
+
+def object_fun():
+    with Live(layout4, refresh_per_second=0.1,screen=True,transient=True) as live:
+           for _ in range(3):
+                    time.sleep(2)
+                    layout4["header"].update(Header())
+                    layout4["box1"].update(object_count_stats())
+
+
+
     menu_choice()
 
 
-
-
-#        rprint(layout)
 os.system('clear')
 title = pyfiglet.figlet_format('PGDASH V1', font="starwars" , justify="center",width=150)
 rprint(f'[yellow]{title}[/yellow]')
