@@ -21,12 +21,10 @@ from rich.panel import Panel
 from rich.text import Text
 from rich import print as rprint
 from time import sleep
-from threading import Thread
 import pyfiglet
 import os
 from contextlib import contextmanager
 from rich.align import Align
-import shutil
 from connect import *
 connection,cursor=connect1()
 
@@ -36,7 +34,7 @@ title = pyfiglet.figlet_format('PG-DASH V1', font="starwars" , justify="center",
 rprint(f'[yellow]{title}[/yellow]')
 title2 = pyfiglet.figlet_format('LOADING..... ',font="small" , justify="center", width=150)
 rprint(f'[yellow]{title2}[/yellow]')
-time.sleep(2)
+time.sleep(1)
 
 def make_layout() -> Layout:
         """Define the layout."""
@@ -116,6 +114,25 @@ def maintenance_layout() -> Layout:
         return layout2
 
 layout2 = maintenance_layout()
+
+def replication_layout() -> Layout:
+        """Define the layout."""
+        layout3 = Layout(name="root")
+
+        layout3.split(
+                Layout(name="header", size=3),
+                Layout(name="main", ratio=1),
+#               Layout(name="footer", size=1),
+        )
+        layout3["main"].split_row(
+                Layout(name="side", ratio=1, minimum_size=40),
+                Layout(name="body", ratio=1, minimum_size=40),
+        )
+        layout3["side"].split(Layout(name="box1"), Layout(name="box2"))
+        layout3["body"].split(Layout(name="box3"), Layout(name="box4"))
+        return layout3
+
+layout3 = replication_layout()
 
 def object_layout() -> Layout:
         """Define the layout."""
@@ -344,7 +361,22 @@ def replication_list():
                 replication_tbl.add_row(*list(row))
         return replication_tbl;
 
+def repl_slot():
+        repl_slot_tbl = Table(title="REPLICATION SLOT DETAILS",box=box.ASCII)
+        repl_slot_tbl = Table(title="REPLICATION SLOT DETAILS",box=box.ASCII)
+        repl_slot_tbl.add_column("SLOT_NAME", style="magenta")
+        repl_slot_tbl.add_column("restart_lsn", style="magenta")
+        repl_slot_tbl.add_column("ACTIVE", style="magenta")
+        repl_slot_tbl.add_column("gb_lag", style="magenta")
 
+        repl_slot_query = "SELECT redo_lsn, slot_name,restart_lsn, active, \
+        round((redo_lsn-restart_lsn) / 1024 / 1024 / 1024, 2)::text AS GB_lag \
+        FROM pg_control_checkpoint(), pg_replication_slots;" 
+        cursor.execute(repl_slot_query)
+        repl_slot_record = cursor.fetchall()
+        for row in repl_slot_record:
+                repl_slot_tbl.add_row(*list(row))
+        return repl_slot_tbl;
 
 def extension_list():
         extension_tbl = Table(title="",box=box.ASCII)
@@ -372,6 +404,19 @@ def archive_stats():
         for row in archive_record:
                 archive_tbl.add_row(*list(row))
         return archive_tbl;
+
+def temp_usage():
+        temp_usage_tbl = Table(title="TEMP USAGE",box=box.ASCII)
+        temp_usage_tbl.add_column("DB_NAME", style="cyan")
+        temp_usage_tbl.add_column("TEMP_FILES", style="cyan")
+        temp_usage_tbl.add_column("TEMP_BYTES", style="cyan")
+        temp_usage_tbl.add_column("STATS_RESET", style="cyan")
+        temp_usage_query = " select  datname,temp_files::text, temp_bytes::text, to_char(stats_reset, 'dd.mm.yyyy HH24:MI:SS') FROM pg_stat_database;"
+        cursor.execute(temp_usage_query)
+        temp_usage_record = cursor.fetchall()
+        for row in temp_usage_record:
+                temp_usage_tbl.add_row(*list(row))
+        return temp_usage_tbl;
 
 
 def blocking_stats():
@@ -550,6 +595,30 @@ def object_count_stats():
         for row in object_count_record:
                 object_count_tbl.add_row(*list(row))
         return object_count_tbl;
+def table_index_size_stat():
+        table_index_tbl = Table(title="TABLE_INDEX_SIZE(TOP 10)) OBJECT COUNT ",title_style='Green',box=box.ASCII)
+        table_index_tbl.add_column("TABLE", style="cyan")
+        table_index_tbl.add_column("TABLE_SIZE", style="cyan")
+        table_index_tbl.add_column("INDEX_SIZE", style="cyan")
+        table_index_tbl.add_column("TOTAL", style="cyan")
+
+        table_index_query = "SELECT \
+        table_name, \
+        pg_size_pretty(table_size) AS table_size, \
+        pg_size_pretty(indexes_size) AS indexes_size, \
+        pg_size_pretty(total_size) AS total_size \
+        FROM ( SELECT table_name, pg_table_size(table_name) AS table_size, \
+        pg_indexes_size(table_name) AS indexes_size, \
+              pg_total_relation_size(table_name) AS total_size \
+        FROM ( SELECT ('\"' || table_schema || '\".\"' || table_name || '\"') AS table_name \
+        FROM information_schema.tables where table_schema not like 'pg_%' and table_schema not in ('information_schema')) AS all_tables \
+        ORDER BY total_size DESC ) AS pretty_sizes limit 10;"
+
+        cursor.execute(table_index_query) 
+        table_index_record = cursor.fetchall()
+        for row in table_index_record:
+                table_index_tbl.add_row(*list(row))
+        return table_index_tbl;
 
 os.system('clear')
 title = pyfiglet.figlet_format('PG-DASH V1', font="starwars" , justify="center",width=150)
@@ -586,10 +655,14 @@ layout2["header"].update(Header())
 layout2["box1"].update(dead_tuple_stat())
 layout2["box2"].update(vacuum_ops_stats())
 layout2["box4"].update(index_stats())
+layout3["header"].update(Header())
+layout3["box1"].update(replication_list())
+layout3["box2"].update(repl_slot())
 
 
 layout4["header"].update(Header())
 layout4["box1"].update(object_count_stats())
+layout4["box2"].update(table_index_size_stat())
 
 
 
@@ -695,6 +768,8 @@ def menu_choice():
         monit_fun()
     elif int(choice)==3:
         maintenance_fun()
+    elif int(choice)==4:
+        replication_fun()
     elif int(choice)==5:
         object_fun()
     else:
@@ -746,12 +821,24 @@ def maintenance_fun():
 
     menu_choice()
 
+def replication_fun():
+    with Live(layout3, refresh_per_second=0.1,screen=True,transient=True) as live:
+           for _ in range(3):
+                    time.sleep(2)
+                    layout3["header"].update(Header())
+                    layout3["box1"].update(replication_list())
+                    layout3["box2"].update(repl_slot())
+
+
+    menu_choice()
+
 def object_fun():
     with Live(layout4, refresh_per_second=0.1,screen=True,transient=True) as live:
            for _ in range(3):
                     time.sleep(2)
                     layout4["header"].update(Header())
                     layout4["box1"].update(object_count_stats())
+                    layout4["box2"].update(table_index_size_stat())
 
 
 
